@@ -1,135 +1,196 @@
 // Rule of Five: if a class needs a custom destructor, copy constructor, copy assignment, move constructor, or move assignment, consider defining all five to manage its resources correctly.
 #include <iostream>
-
+#include <vector>
 
 class Buffer
 {
-/*
-This class holds an int buffer 
-the client instantiates the buffer of a certain size during construction
-the buffer can be copied and moved
-*/
-public:
-    explicit Buffer() = delete;
-    Buffer(const size_t& buffer_size): num_elements_(buffer_size) 
-    {
-        // {} zero-initializes every int, so all elements are safe to read.
-        // If new throws, construction fails; no array needs freeing.
-        data_ = new int[num_elements_]{};
-    }
+    /*
+    This class holds an int buffer 
+    the client instantiates the buffer of a certain size during construction
+    the buffer can be copied and moved
+    */
+    public:
+        explicit Buffer() = delete;
+        Buffer(const size_t& buffer_size): num_elements_(buffer_size) 
+        {
+            // {} zero-initializes every int, so all elements are safe to read.
+            // If new throws, construction fails; no array needs freeing.
+            data_ = new int[num_elements_]{};
+        }
 
-    // copy constructor
-    Buffer(const Buffer& other)
-    {
-        // A new object has no old array to delete (data_ starts as nullptr).
-        num_elements_ = other.get_size();
-        data_ = new int[num_elements_];
-        for (size_t i = 0; i < num_elements_; ++i)
-            data_[i] = other[i];
-    }
+        // copy constructor
+        Buffer(const Buffer& other)
+        {
+            // A new object has no old array to delete (data_ starts as nullptr).
+            num_elements_ = other.get_size();
+            data_ = new int[num_elements_];
+            for (size_t i = 0; i < num_elements_; ++i)
+                data_[i] = other[i];
+        }
 
-    //copy assignment operator
-    Buffer& operator = (const Buffer& other)
-    {
-        // Compare object addresses for self-assignment, not element values.
-        if (this == &other)
+        //copy assignment operator
+        Buffer& operator = (const Buffer& other)
+        {
+            // Compare object addresses for self-assignment, not element values.
+            if (this == &other)
+                return *this;
+
+            // Allocate and copy before deleting: if new throws, *this is unchanged.
+            // Copying ints cannot throw; this gives the strong exception guarantee.
+            int* new_data = new int[other.get_size()];
+            for (size_t i = 0; i < other.get_size(); ++i)
+                new_data[i] = other[i];
+            delete [] data_;
+            data_ = new_data;
+            num_elements_ = other.get_size();
+            return *this; // Allows chaining: a = b = c.
+        }
+
+        //move constructor
+        Buffer(Buffer&& other) noexcept
+        {
+            // Transfer ownership without allocation or element copies (cannot throw).
+            // Member functions can access private fields of any Buffer instance.
+            num_elements_ = other.get_size();
+            data_ = other.data_;
+            // Leave the source empty so its destructor cannot free our array.
+            // Transfer the pointer directly: indexing [0] would fail for empty buffers.
+            other.data_ = nullptr;
+            other.num_elements_ = 0;
+        }
+
+        //move assignment operator
+        Buffer& operator = (Buffer&& other) noexcept
+        {
+            // Protect the allocation when assigning an object to itself via std::move.
+            if (this == &other)
+                return *this;
+
+            // Assignment replaces an existing object, so release its old allocation.
+            delete [] data_;
+            num_elements_ = other.get_size();
+            data_ = other.data_;
+            other.data_ = nullptr;
+            other.num_elements_ = 0;
             return *this;
+        }
 
-        // Allocate and copy before deleting: if new throws, *this is unchanged.
-        // Copying ints cannot throw; this gives the strong exception guarantee.
-        int* new_data = new int[other.get_size()];
-        for (size_t i = 0; i < other.get_size(); ++i)
-            new_data[i] = other[i];
-        delete [] data_;
-        data_ = new_data;
-        num_elements_ = other.get_size();
-        return *this; // Allows chaining: a = b = c.
-    }
+        int& operator [] (size_t pos)
+        {
+            // A reference permits writes such as buffer[i] = 5. Index is unchecked.
+            return data_[pos];
+        }
 
-    //move constructor
-    Buffer(Buffer&& other) noexcept
-    {
-        // Transfer ownership without allocation or element copies (cannot throw).
-        // Member functions can access private fields of any Buffer instance.
-        num_elements_ = other.get_size();
-        data_ = other.data_;
-        // Leave the source empty so its destructor cannot free our array.
-        // Transfer the pointer directly: indexing [0] would fail for empty buffers.
-        other.data_ = nullptr;
-        other.num_elements_ = 0;
-    }
+        const int& operator [] (size_t pos) const
+        {
+            // Const buffers (including copy sources) allow reads, but not writes.
+            return data_[pos];
+        }
 
-    //move assignment operator
-    Buffer& operator = (Buffer&& other) noexcept
-    {
-        // Protect the allocation when assigning an object to itself via std::move.
-        if (this == &other)
-            return *this;
+        size_t get_size() const
+        {
+            return num_elements_;
+        }
 
-        // Assignment replaces an existing object, so release its old allocation.
-        delete [] data_;
-        num_elements_ = other.get_size();
-        data_ = other.data_;
-        other.data_ = nullptr;
-        other.num_elements_ = 0;
-        return *this;
-    }
+        void print()
+        {
+            for (size_t i = 0; i < num_elements_; ++i)
+                std::cout << data_[i] << " ";
+            std::cout << std::endl;
+        }
 
-    int& operator [] (size_t pos)
-    {
-        // A reference permits writes such as buffer[i] = 5. Index is unchecked.
-        return data_[pos];
-    }
-
-    const int& operator [] (size_t pos) const
-    {
-        // Const buffers (including copy sources) allow reads, but not writes.
-        return data_[pos];
-    }
-
-    size_t get_size() const
-    {
-        return num_elements_;
-    }
-
-    void print()
-    {
-        for (size_t i = 0; i < num_elements_; ++i)
-            std::cout << data_[i] << " ";
-        std::cout << std::endl;
-    }
-
-    bool operator == (const Buffer& other) const
-    {
-        // Equality compares contents; independent deep copies can still be equal.
-        if (other.get_size() != num_elements_)
-            return false;
-        for (size_t i = 0; i < num_elements_; ++i)
-            if (data_[i] != other[i])
+        bool operator == (const Buffer& other) const
+        {
+            // Equality compares contents; independent deep copies can still be equal.
+            if (other.get_size() != num_elements_)
                 return false;
-        return true;
-    }
+            for (size_t i = 0; i < num_elements_; ++i)
+                if (data_[i] != other[i])
+                    return false;
+            return true;
+        }
 
-    ~Buffer() 
-    {
-        // Public so scope exit can destroy buffers. delete[] nullptr is safe.
-        delete [] data_;
-    }
+        ~Buffer() 
+        {
+            // Public so scope exit can destroy buffers. delete[] nullptr is safe.
+            delete [] data_;
+        }
 
-private:
+    private:
     // Owning raw pointer: destructor, copy, and move operations must agree
     // on ownership (Rule of Five). An empty moved-from buffer uses {0, nullptr}.
     size_t num_elements_{0};
     int* data_{nullptr};
 };
 
+class Buffer_rule_zero
+{
+/*
+This buffer shall store data in a std::vector
+That's why no custom implementation will be required for copy and move constructors and assignment operators, or destructor 
+*/
+public:
+    Buffer_rule_zero() = delete;
+    explicit Buffer_rule_zero(const size_t buffer_size)
+    {
+        data_.resize(buffer_size, 0);
+    }
+
+    // no need for copy constructor, move constructor, and copy and move assignment operators
+
+    bool operator == (const Buffer_rule_zero& other) const
+    {
+        return data_ == other.data_;
+    }
+
+    // rw access
+    int& operator [] (size_t pos)
+    {
+        return data_[pos];
+    }
+
+    // read only access
+    int operator [] (size_t pos) const
+    {
+        return data_[pos];
+    }
+
+    size_t size() const
+    {
+        return data_.size();
+    }
+
+    void print() const
+    {
+        if (!data_.size())
+            std::cout << "empty buffer" << std::endl;
+
+        for (const auto& element : data_)
+            std::cout << element << " ";
+        std::cout << std::endl;
+    }
+
+private:
+    std::vector<int> data_{};
+};
+
 int main()
 {
-    Buffer bc = Buffer(10);
-    bc[5] = 5;
-    bc.print();
+    // Buffer bc = Buffer(10);
+    // bc[5] = 5;
+    // bc.print();
 
-    auto bc_copy = bc; //copy
-    bc_copy.print();
-    
+    // auto bc_copy = bc; //copy
+    // bc_copy.print();
+
+    Buffer_rule_zero bn(10);
+    bn[5] = 100;
+    bn.print();
+
+    auto bn_copy(bn);
+    bn_copy.print();
+
+    auto bn_move_constructed = std::move(bn_copy);
+    bn_move_constructed.print();
+    bn_copy.print();
 }
