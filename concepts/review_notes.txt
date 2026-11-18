@@ -1,0 +1,208 @@
+hmm, review notes
+1. move semantics - memory ownership not clear, need some simplifying diagrams maybe in style of 'head first' series
+2. slide 7, what's use?? borrowing??
+3. also weak_ptr, that's always been a mystery to me, need a more 'tangible' explanation
+4. slide 8, explanation of lambda syntax please
+5. where are answers to all these questions? is there a slide with all the questions and answers in one place? 
+6. example in slide 9 is not clear, why lock(m)? when you lock m, you haven't restricted access to q, but if you just wait until there's something in q, then you've waited until some other thread put something there .. no need for mutex
+7. what's a predicate? 
+8. slide 10: what's runtime dispatch? explain background knowledge
+9. explain virtual destructors, show example
+10. in slide 11, don't understand what dependency injection concept is. can you please spell it out ..
+11. what's 'borrowing' here?
+12. slide 13 - what's 'perfect forwarding'? explain in plain language, like in basic terms with fundamental computer science terminology
+13. what's class ... Args?
+14. slide 13 is very dense, can't make a jump to this from like intermediate c++, this is like vodoo
+15. slide 14 what's vector got to do with cpu? why it fetches more efficiently? why reallocation invalidates reference? reallocation as in resize? 
+16. slide 15 why unordered map o1 lookup? why o logn lookup for ordered map? what's the difference between two? 
+17. what's the point of slide 16?
+what's alignof in slide 17? what's the key idea here? the main thing i should remember is not clearly stated in plain words
+slide 18, ownership of shared memory not explained
+what's 0600, syntax of mmap not explained either, what's going on here, why ftruncate?? what can be put in shared memory? you asked about mutex, idk!
+s 19 - this supposed to be qnx7 api? what privileges are required? maybe link secpol here too somehow
+s20 - explain concept of optional, in plain words, with relevant syntax, and why instantiation of Result has a bracket? shouldn't it be Result readSpeed; ?
+s21 - what? what's hw boundary here? too abstract ..
+s22 - what's this Result idea? i've seen this before, seems like a common pattern, guess would help to have something like 'it's a common pattern in industry to have 'Result' for doing xyz'
+don't really see how i am using any of these things, context is missing, like for s22, if it said, 'now try to apply this concept to implement a little mock setup for ...', you know? and later, did you use the concept-x that's shown here? 
+s23 - what's thread safety? explain important concepts like this in plain language, and does vehicle sdk have classes here? like which ones? for what? how is the sdk used? is that a bunch of libs? is that an app framework?
+
+s24 - what's shutdown? 
+like, for every slide, would be great if there was also a toy problem/task, a little one that wouldn't take more than a 100 lines, to implement, you know, to practice typing out the right syntaxes etc. from scratch, and to really get the concepts under the fingers
+
+s25 - what's unique lock? what's notFull_? what's predicate? i guess you need to write these things for a lower level, in plainer language, so that i can become familiar with these terms and understand them in terms of the basics or the more primitive things, and also **memorise** them - they should stick, you know? like forever
+
+s28 - why might first be dangling? we're talking about a reference here, not a pointer, or?
+and what really is the syntax of std::thread? also, future/promise, atomic - need to understand these things more fundamentally, so that they stick, you know? and in simpler/fundamental terms, like plain feynman, not theatrical, but just plain and intuitive
+
+s29 - skip the plan, i need something i can review in 2-3 hours in urgent cases, like personalized study notes i would write with all my nice analogies and intuitions for all the important stuff
+
+s30 - seems like something that should be right in the beginning, like a table of contents, so that i can see what's in here, and what's potentially missing 
+------------------------------
+second review
+
+let's maybe use ethernet instead of can, or maybe ethernet and can if that makes sense, or even include uart as well
+
+how about an egomotion application instead of a really simple app reading only speed?
+
+s4 - not clear what 'safe' means in 'reference is not automatically safe just ...'
+is this an example of dangling reference? reply in chat, and if sensible, add it to slides somehow
+int main()
+{
+  int init = 10;
+  int& ref = init;
+  {
+    int val = 5;
+    ref = val;
+    std::cout << ref << std::endl;
+  }
+  
+  std::cout << ref << std::endl;
+  ref = 20;
+  std::cout << ref << std::endl;
+  
+  
+  return EXIT_SUCCESS;
+}
+
+
+s6 - 'standard wrappers and rule of zero' that's unclear jargon to me
+i guess i am looking for material in the cambridge a-level style, you know? could be slightly more advanced considering i went to uni after that, but basically ..
+would be nice to understand the difference between make_unique and std::unique_ptr<T> p (new String{"Pamir"}), and also curly brace initialization vs initialization with (), I think we had that in cpp 11
+
+s7 - that cpp example is not clear
+if live = observer.lock(), then what's that expression returning? how does if get a boolean? 
+don't get what's happening, need a narrative here
+focus here is on weak_ptr, but i'd rather nail down the proper **ways** to use unique and shared ptrs
+
+
+regarding lambda, i've seen it used with .andThen ... idk what this pattern is called, maybe builder or something like that, would be cool if you could add that example for lambda and explain, instead of this really simple example in slide 8
+
+s9 - what's multi-field invariant?
+// Example program
+#include <iostream>
+#include <string>
+#include <memory>
+#include <thread>
+#include <atomic>
+
+
+int main()
+{
+  std::atomic<int> counter{0};
+//   int counter{0};
+  std::thread t1{
+      [&counter](){
+        for (size_t i= 0; i<10000; ++i)
+        ++counter;
+      }
+      
+  };
+  std::thread t2{
+      [&counter](){
+        for (size_t i= 0; i<10000; ++i)
+        ++counter;
+      }
+      
+  };
+  
+  t1.join();
+  t2.join();
+  
+  std::cout << "counter = " << counter << std::endl;
+  return EXIT_SUCCESS;
+}
+and maybe add this or simpler example to illustrate what using atomic vs not does
+come to think about it, it would be nice to have these ideas in a toolbox, where you think of each tool when you want to do something specific in a sdk
+you know, like if you want to drill a hole, you reach for a drill, if you want to pull a nail out, you reach for back side of a hammer (?), and so on
+so if you want to <??>, you reach for an 'atomic'
+you know, like that, but for every concept
+
+s10 - still don't get why lock before cv.wait
+what's going on there? no explainers!
+maybe adding a data producer here that's supposed to add something to the queue would help? and this notification for cv, is that a kernel call? 
+
+s11 - maybe add something for async too, so that it's a complete slide, and show the difference as necessary for async vs no async? 
+
+s12 - add reference to vtable as well in understandable basic language
+and make explanation of virtual destructor more concrete
+don't we have that so that the part of object that belongs to the inheriting class can also be deleted, and not just the base part? but also, abstract classes can't have data, so i'm not sure what i'm saying would apply to abstract classes
+
+s13 - why do you do dependency injection? can you add that too? you know, according to the toolbox idea
+
+s14 - would be nice to review the syntax of templates with classes too, i think functions are simpler, and the intricacies with classes
+
+s15 - why did we do that complicated code? is that just to have a generic function that can construct any type of object T, that may take whatever params? 
+
+s16 - maybe explain how growth beyond capacity and resulting reallocation might invalidate iterators and references? 
+
+s17 - so is unordered map a hashmap and ordered one a binary tree so that when you look up for an element, you do a binary search, therefore the lookup time is the same as that for a binary search? 
+
+s18 - that note to remember makes no sense
+the example is nice, but idk how it's about worst case
+
+s19 - what's byte boundary? good example with Sample, but show padding and offset with a simple diagram, i tried the task and got size as 16! was expecting 9
+
+s20 - maybe also explain these weird flags o_creat and o_rdwr, and explain this 0600 octal logic, also mmap arguments are not clear, i wish i could see something like named args in python, you know?
+
+
+s21 - can be just bullets about key scheduling ideas and common pitfalls in qnx scheduling and general scheduling concepts that are most relevant for an sdk architect, no need for that code I think, maybe some bullets about secpol too with note that it's for qnx (in case it's not for linux too)
+
+s22 - what's std::variant?
+i get the idea behind optional, but still don't understand what result could be for, is that similar to optional then? not clear
+
+
+s23 - what's asan/ubsan?? tsan?? are these japanese words?! lol
+
+s24 - in code, relations in comments not clear, what do those arrows mean?
+
+s25 - are those class variables in the example? the premise needs to be clearer, the backstory about what that code is trying to do
+
+
+s26 - sequence for wait is not clear - is there a signal sent to the thread when the condition changes and then the thread tries to lock mutex first, but then for what? or does the thread try to lock the mutex from time to time to check condition? that would be bad design ..
+and what's notFull_? is that a semaphore?
+
+s27 - ok, that's a nice small concept, not sure if we can pack this somewehre else and use the slide for something else, valuable concept, but does it need a full slide?
+
+s28 - perfect forwarding is still not clear to me
+casting to rvalue is also quite abstract, i guess you need to say something like 'the class needs to implement move constructor to ...'
+
+
+3 slides in the end? idk, and some points are good, but most are low value, don't stick, need like some real nuggets that one should **always** keep in mind as an sdk designer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
